@@ -1,0 +1,15 @@
+# Dependencies for m8raw2dng2.  Install with:  pip install -r requirements.txt
+
+# Required.
+numpy
+
+# Optional (installed here for convenience; the tool runs without them):
+#   tifffile - only to re-process an existing .DNG back into a DNG;
+#              RAW -> DNG uses the built-in writer and needs only NumPy.
+#   pillow   - only for the --legacy-preview path (decode/despeckle the embedded
+#              JPEG preview).  EXIF/MakerNote parsing does not use it.
+tifffile
+pillow
+
+# The GUI (m8raw2dng2_gui.py) uses only the standard library (tkinter).
+# On most Linux distributions tkinter ships separately, e.g. sudo apt install python3-tk
