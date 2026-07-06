@@ -1,21 +1,61 @@
+# ─────────────────────────────────────────────
+#  m8raw2dng2 - .gitignore
+# ─────────────────────────────────────────────
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
 .venv/
 venv/
-.DS_Store
-*.zip
-journal.txt
+env/
 
+# Build output (PyInstaller)
 build/
 dist/
 *.spec
+
+# Conversion I/O
 Input/
 Output/
-out/
+
+# Image / data files (any case)
 *.RAW
+*.raw
 *.JPG
+*.jpg
 *.JPEG
+*.jpeg
 *.DNG
+*.dng
 *.BIA
+*.bia
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Private / runtime
+journal.txt
 m8raw2dng2_gui_state.json
+
+# OS cruft
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
