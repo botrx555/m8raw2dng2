@@ -60,8 +60,8 @@ try:
 except Exception:
     HAVE_PIL = False
 
-__version__ = "2.12.0b0"
-VERSION_DISPLAY = "2.12.0 beta"
+__version__ = "2.13.0b0"
+VERSION_DISPLAY = "2.13.0 beta"
 PROG = "m8raw2dng2"
 log = logging.getLogger(PROG)
 
@@ -94,7 +94,6 @@ EXIF_MAKE = "Leica Camera AG"
 MODEL_M8 = "M8 Digital Camera"
 MODEL_M8RAW = "M8RAW Digital Camera"
 UNIQUE_MODEL = "M8 Digital Camera"
-SOFTWARE = "2.014"
 
 COLORMATRIX1_M8 = [(625, 597), (-110, 207), (16, 125), (-138, 319), (761, 625),
                    (112, 463), (-150, 1693), (229, 926), (179, 250)]
@@ -169,8 +168,24 @@ class Options:
     meter_offset_map: dict = field(default_factory=dict)
 
 
+def _app_base_dir() -> str:
+    # Where lensdb.ini / sensdb.ini live.
+    # Bundled (PyInstaller): the folder that CONTAINS the .app / .exe, so the
+    # INIs sit beside the app and stay user-editable.
+    # Loose script: the folder holding this .py.
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        app_dir = exe_dir
+        for _ in range(3):
+            if os.path.basename(app_dir).endswith(".app"):
+                return os.path.dirname(app_dir)
+            app_dir = os.path.dirname(app_dir)
+        return os.path.dirname(exe_dir)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def _db_path(opts: Options, name: str) -> str:
-    base = opts.db_dir or os.path.dirname(os.path.abspath(__file__))
+    base = opts.db_dir or _app_base_dir()
     return os.path.join(base, name)
 
 
@@ -608,9 +623,15 @@ def read_jpeg_meta(path: str) -> "dict | None":
 
     ifd0 = entries(u32(4))
     exif_off = None
+    jpeg_software = None
     for tag, typ, cnt, vo in ifd0:
         if tag == 34665:
             exif_off = struct.unpack(bo + "I", vo)[0]
+        elif tag == 305 and typ in (2, 7):
+            try:
+                jpeg_software = raw_of(typ, cnt, vo).split(b"\x00")[0].decode("latin1").strip()
+            except Exception:
+                jpeg_software = None
     ex = entries(exif_off) if exif_off else []
 
     m = {}
@@ -696,6 +717,7 @@ def read_jpeg_meta(path: str) -> "dict | None":
         "image_unique_id": as_str(m.get(42016, b"")),
         "makernote": bytes(makernote) if makernote else None,
         "serial": str(serial) if serial is not None else None,
+        "software": jpeg_software or None,
         "lens_code_raw": lens_code,
         "as_shot_neutral": as_shot_neutral,
         "ext_brightness": ext_bv,
@@ -1001,7 +1023,7 @@ def build_ifd0(opts, jm, serial, fnumber):
         (283, T_RATIONAL, [(300, 1)]),
         (284, T_SHORT, 1),
         (296, T_SHORT, 2),
-        (305, T_ASCII, SOFTWARE),
+        *([(305, T_ASCII, jm["software"])] if (jm and jm.get("software")) else []),
         (315, T_ASCII, ""),
         (33421, T_SHORT, (2, 2)),
         (33422, T_BYTE, CFA_BYTES.get(opts.cfa, CFA_BYTES["RGGB"])),
@@ -1260,7 +1282,7 @@ def build_ifd0_preview(opts, jm, serial, prev_w, prev_h, prev_len, jpeg=True):
         (283, T_RATIONAL, [(72, 1)]),
         (284, T_SHORT, 1),
         (296, T_SHORT, 2),
-        (305, T_ASCII, SOFTWARE),
+        *([(305, T_ASCII, jm["software"])] if (jm and jm.get("software")) else []),
         (315, T_ASCII, ""),
         (330, T_LONG, "@RAWSUBIFD"),
         (33432, T_ASCII, ""),

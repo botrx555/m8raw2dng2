@@ -39,7 +39,22 @@ import datetime
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 
-TOOLDIR = os.path.dirname(os.path.abspath(__file__))
+def _app_base_dir() -> str:
+    # Folder that holds lensdb.ini / sensdb.ini and anchors relative paths.
+    # Bundled (PyInstaller): the folder CONTAINING the .app / .exe (beside the app).
+    # Loose script: the folder holding this .py.
+    if getattr(sys, "frozen", False):
+        d = os.path.dirname(os.path.abspath(sys.executable))
+        for _ in range(3):
+            if os.path.basename(d).endswith(".app"):
+                return os.path.dirname(d)
+            d = os.path.dirname(d)
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+TOOLDIR = _app_base_dir()
+USERDIR = os.path.expanduser("~")
 
 sys.path.insert(0, TOOLDIR)
 try:
@@ -256,6 +271,10 @@ class App(ttk.Frame):
         b = ttk.Frame(f); b.grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.cal_dot = ttk.Label(b, text="\u25cb"); self.cal_dot.grid(row=0, column=0)
         self.cal_txt = ttk.Label(b, text="Not calibrated"); self.cal_txt.grid(row=0, column=1, padx=(6, 0))
+        r2 = ttk.Frame(f); r2.grid(row=2, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(r2, text="Lens database:").grid(row=0, column=0, sticky="w")
+        ttk.Button(r2, text="Edit lenses\u2026", width=16,
+                   command=self._open_lens_editor).grid(row=0, column=1, sticky="w", padx=(8, 0))
 
     def _build_image(self, parent):
         f = self._section(parent, "Image & DNG basics")
@@ -378,13 +397,13 @@ class App(ttk.Frame):
 
     def _pick_in(self):
         d = filedialog.askdirectory(title="Choose the input folder",
-                                    initialdir=self._resolve(self.in_path.get()) or TOOLDIR)
+                                    initialdir=self._resolve(self.in_path.get()) or USERDIR)
         if d:
             self.in_path.set(d); self._refresh_cmd()
 
     def _pick_out(self):
         d = filedialog.askdirectory(title="Choose the output folder",
-                                    initialdir=self._resolve(self.out_path.get()) or TOOLDIR)
+                                    initialdir=self._resolve(self.out_path.get()) or USERDIR)
         if d:
             self.out_path.set(d); self._refresh_cmd()
 
@@ -559,6 +578,160 @@ class App(ttk.Frame):
         codes = self._lens_codes()
         self.dd_lens["values"] = codes
         self.dd_calib["values"] = codes
+
+    def _lensdb_path(self):
+        return os.path.join(TOOLDIR, "lensdb.ini")
+
+    def _write_lens_db(self, db):
+        # Canonical, atomic rewrite of lensdb.ini from
+        # {code: {Maker, Model, SerialNo, FocalLength, Apertures[]}}.
+        lines = []
+        for code in sorted(db):
+            e = db[code]
+            lines.append(f"[{code}]")
+            lines.append(f"Maker = {e.get('Maker', '') or ''}")
+            lines.append(f"Model = {e.get('Model', '') or ''}")
+            lines.append(f"SerialNo = {e.get('SerialNo', '') or ''}")
+            fl = e.get("FocalLength")
+            lines.append(f"FocalLength = {('%g' % fl) if fl is not None else ''}")
+            for a in e.get("Apertures", []):
+                lines.append(f"Aperture = {a:g}")
+            lines.append("")
+        text = "\n".join(lines).rstrip() + "\n"
+        path = self._lensdb_path()
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, path)
+
+    def _open_lens_editor(self):
+        win = tk.Toplevel(self)
+        win.title("Lens database (lensdb.ini)")
+        win.transient(self)
+        win.resizable(False, False)
+
+        db = self._lens_db()
+
+        v_pick = tk.StringVar()
+        v_code = tk.StringVar()
+        v_maker = tk.StringVar()
+        v_model = tk.StringVar()
+        v_serial = tk.StringVar()
+        v_focal = tk.StringVar()
+        v_aps = tk.StringVar()
+
+        frm = ttk.Frame(win, padding=10)
+        frm.grid(row=0, column=0, sticky="nsew")
+
+        top = ttk.Frame(frm)
+        top.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        ttk.Label(top, text="Lens:").grid(row=0, column=0, sticky="w")
+        dd = ttk.Combobox(top, textvariable=v_pick, width=12, state="readonly",
+                          values=sorted(db.keys()))
+        dd.grid(row=0, column=1, sticky="w", padx=(6, 0))
+
+        def clear_form():
+            v_pick.set("")
+            for v in (v_code, v_maker, v_model, v_serial, v_focal, v_aps):
+                v.set("")
+
+        ttk.Button(top, text="New", width=8, command=clear_form).grid(row=0, column=2, padx=(12, 0))
+
+        def field(r, label, var, width=26):
+            ttk.Label(frm, text=label).grid(row=r, column=0, sticky="w", padx=8, pady=4)
+            ttk.Entry(frm, textvariable=var, width=width).grid(row=r, column=1, sticky="w", padx=8, pady=4)
+
+        field(1, "6-bit code", v_code, 14)
+        field(2, "Maker", v_maker)
+        field(3, "Model", v_model)
+        field(4, "SerialNo", v_serial)
+        field(5, "FocalLength (mm)", v_focal, 10)
+        field(6, "Apertures (comma-sep)", v_aps, 30)
+
+        def load(code):
+            e = db.get(code)
+            if not e:
+                return
+            v_code.set(code)
+            v_maker.set(e.get("Maker", "") or "")
+            v_model.set(e.get("Model", "") or "")
+            v_serial.set(e.get("SerialNo", "") or "")
+            fl = e.get("FocalLength")
+            v_focal.set(f"{fl:g}" if fl is not None else "")
+            v_aps.set(",".join(f"{a:g}" for a in e.get("Apertures", [])))
+
+        dd.bind("<<ComboboxSelected>>", lambda ev: load(v_pick.get()))
+
+        def do_save():
+            code = v_code.get().strip()
+            if not code:
+                messagebox.showerror("Lens database", "6-bit code is required.", parent=win)
+                return
+            if len(code) != 6 or any(c not in "01" for c in code):
+                if not messagebox.askyesno(
+                        "Lens database",
+                        f"'{code}' is not six binary digits (000000-111111).\nSave it anyway?",
+                        parent=win):
+                    return
+            fl_txt = v_focal.get().strip()
+            fl = None
+            if fl_txt:
+                try:
+                    fl = float(fl_txt)
+                except ValueError:
+                    messagebox.showerror("Lens database", f"FocalLength '{fl_txt}' is not a number.", parent=win)
+                    return
+            aps = []
+            for tok in v_aps.get().replace(";", ",").split(","):
+                tok = tok.strip()
+                if not tok:
+                    continue
+                try:
+                    aps.append(float(tok))
+                except ValueError:
+                    messagebox.showerror("Lens database", f"Aperture '{tok}' is not a number.", parent=win)
+                    return
+            if code in db and code != v_pick.get():
+                if not messagebox.askyesno("Lens database",
+                                           f"Lens '{code}' already exists.\nOverwrite it?", parent=win):
+                    return
+            db[code] = {"Maker": v_maker.get().strip(), "Model": v_model.get().strip(),
+                        "SerialNo": v_serial.get().strip(), "FocalLength": fl, "Apertures": aps}
+            try:
+                self._write_lens_db(db)
+            except Exception as exc:
+                messagebox.showerror("Lens database", f"Could not write lensdb.ini:\n{exc}", parent=win)
+                return
+            dd["values"] = sorted(db.keys())
+            v_pick.set(code)
+            self._populate_lens_dropdowns()
+            messagebox.showinfo("Lens database", f"Saved lens '{code}'.", parent=win)
+
+        def do_delete():
+            code = (v_pick.get() or v_code.get()).strip()
+            if not code or code not in db:
+                messagebox.showerror("Lens database", "Pick an existing lens to delete.", parent=win)
+                return
+            if not messagebox.askyesno("Lens database", f"Delete lens '{code}'?", parent=win):
+                return
+            db.pop(code, None)
+            try:
+                self._write_lens_db(db)
+            except Exception as exc:
+                messagebox.showerror("Lens database", f"Could not write lensdb.ini:\n{exc}", parent=win)
+                return
+            dd["values"] = sorted(db.keys())
+            clear_form()
+            self._populate_lens_dropdowns()
+
+        btns = ttk.Frame(frm)
+        btns.grid(row=7, column=0, columnspan=2, sticky="e", pady=(10, 0))
+        ttk.Button(btns, text="Delete", command=do_delete).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(btns, text="Save / Update", command=do_save).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(btns, text="Close", command=win.destroy).grid(row=0, column=2)
+
+        win.grab_set()
+        win.wait_window()
 
     def _refresh_badges(self):
         try:
@@ -1044,7 +1217,7 @@ class App(ttk.Frame):
 
     def _make_darkfield(self):
         folder = filedialog.askdirectory(
-            title="Choose the folder of dark frames (ISO 160 darks)", initialdir=TOOLDIR)
+            title="Choose the folder of dark frames (ISO 160 darks)", initialdir=USERDIR)
         if not folder:
             return
         o = self._collect(for_darkfield=True)
@@ -1106,7 +1279,7 @@ class App(ttk.Frame):
                 "fed from lensdb.ini), so the offset is stored against the right (body, lens).")
             return
         folder = filedialog.askdirectory(
-            title="Choose the folder of known-aperture calibration frames", initialdir=TOOLDIR)
+            title="Choose the folder of known-aperture calibration frames", initialdir=USERDIR)
         if not folder:
             return
         o = self._collect()

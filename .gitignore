@@ -6,3 +6,16 @@ venv/
 .DS_Store
 *.zip
 journal.txt
+
+build/
+dist/
+*.spec
+Input/
+Output/
+out/
+*.RAW
+*.JPG
+*.JPEG
+*.DNG
+*.BIA
+m8raw2dng2_gui_state.json
