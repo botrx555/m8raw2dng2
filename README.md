@@ -49,7 +49,7 @@ plus a few refinements, not replacement.
 
 | | m8raw2dng (Arvid Bux) | m8raw2dng2 |
 |---|---|---|
-| Platform | Windows `.exe` + `.bat`; separate macOS droplet | Pure Python — Windows, macOS, Linux |
+| Platform | Windows `.exe` + `.bat`; separate macOS droplet | Pure Python (Windows/macOS/Linux) + standalone Mac/Windows builds |
 | Interface | console | same CLI **+** optional Tk GUI |
 | Source | closed-source freeware | open source (MIT) |
 | RAW → DNG output | the reference | byte-identical (except the estimated `FNumber`; `-A` → bit-identical) |
@@ -115,6 +115,11 @@ Both front-ends read `lensdb.ini` / `sensdb.ini` from the tool's own folder.
 python3 m8raw2dng2.py [options] FILE.RAW | FOLDER ...   # CLI
 python3 m8raw2dng2_gui.py                               # GUI
 ```
+
+Standalone Mac (`.app`) and Windows (`.exe`) builds requiring no Python are
+attached to each release. Both are unsigned. macOS: right-click -> Open -> Open;
+if blocked, `xattr -dr com.apple.quarantine /path/to/m8raw2dng2.app`. Windows:
+SmartScreen -> More info -> Run anyway. Once each.
 
 ### Launchers (`.bat` / `.command`)
 
@@ -197,7 +202,7 @@ python3 m8raw2dng2.py -v -p -s -l <6bitcode> FOLDER
 **GUI:** pick the input/output folders, tick options, click **Convert**. A live
 **Command** readout shows the exact equivalent command line; a progress bar tracks
 the run; the **Log** opens in its own window. The `-sd` and `--calibrate-fnumber`
-setups each have their own button; in the calibration row, choosing the lens code auto-fills its apertures (still editable). Option sets save as named **Presets** (one file
+setups each have their own button; in the calibration row, choosing the lens code auto-fills its apertures (still editable). An **Edit lenses…** button opens a modal `lensdb.ini` editor for adding, editing and deleting lens entries (6-bit code, maker, model, focal length, apertures). Option sets save as named **Presets** (one file
 each under `Presets/`), and your last-used settings are restored on the next launch.
 
 ### Per-frame dark subtraction (`.BIA`)
@@ -459,9 +464,12 @@ the original's; every refinement is opt-in.
 ## Version history
 
 `m8raw2dng2` reproduces the behaviour of Arvid Bux's `m8raw2dng` **v1.2beta** (its
-last public release) and adds the refinements noted above. This repository is
-versioned independently — see the Git tags / release notes for per-version
-changes. Current: **2.12.0 beta** (`2.12.0b0`).
+last public release) and adds the refinements noted above. Versioned independently;
+see the Git tags / release notes for full per-version detail.
+
+* **2.13.0 beta** (`2.13.0b0`) — standalone Mac/Windows builds (no Python needed);
+  GUI lens-database editor.
+* **2.12.0 beta** (`2.12.0b0`) — first public release.
 
 ---
 
