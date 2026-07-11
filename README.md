@@ -276,7 +276,7 @@ python3 -m pip install -r requirements.txt
 | `-sd` | create/update the sensor darkfield (one frame or a whole folder) instead of converting |
 | `-st` | sensor test: paint configured/auto-detected bad columns white |
 
-### Refinements - all opt-in; bare `-v` / `-s` stay byte-exact
+### Refinements - all opt-in; bare `-v` stays byte-exact except `FNumber`
 
 | Flag | Meaning |
 |---|---|
@@ -447,8 +447,8 @@ and the written `BlackLevel` are scaled by whole-stop analog gain
   writes `BlackLevel=0` (the original ignores an adjacent `.BIA`).
 * `-s` - **near-exact (±1 DN).** The original's per-frame pedestal (~0.26 DN,
   drifting frame-to-frame) and per-pixel floor/ceil dither are not recoverable
-  from the stored darkfield; high-ISO gain scaling is reproduced and `BlackLevel`
-  is byte-exact.
+  from the stored darkfield; high-ISO gain scaling is reproduced (the darkfield
+  tracks the M8's whole-stop analog gain).
 
 ---
 
