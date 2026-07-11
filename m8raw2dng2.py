@@ -60,8 +60,8 @@ try:
 except Exception:
     HAVE_PIL = False
 
-__version__ = "2.13.0b0"
-VERSION_DISPLAY = "2.13.0 beta"
+__version__ = "2.13.1b0"
+VERSION_DISPLAY = "2.13.1 beta"
 PROG = "m8raw2dng2"
 log = logging.getLogger(PROG)
 
@@ -769,12 +769,13 @@ def _iso_gain(iso, base_iso: int = 160) -> int:
     stops.  The camera's real ISO steps (160/320/640/1250/2500) are successive
     doublings, so the gain is 2**round(log2(ISO/160)) = 1, 2, 4, 8, 16.
 
-    When a base-ISO sensor database is applied to a higher-ISO frame, the
-    reference tool scales BOTH the darkfield LevelCorrection AND the written
-    BlackLevel by this factor.  Verified byte-exact on ISO-2500 references:
+    When a base-ISO sensor database is applied to a higher-ISO frame,
+    m8raw2dng2 scales BOTH the darkfield LevelCorrection (under -s) AND the
+    written BlackLevel (under -b) by this factor:
     out == round(raw - gain*LevelCorrection) and BlackLevel == base_black*gain
-    (e.g. 90 -> 1440 at gain x16).  Returns 1 for base ISO or unknown ISO, so
-    the base-ISO path (and every previously byte-identical path) is untouched."""
+    (e.g. 90 -> 1440 at gain x16).  The original writes no BlackLevel tag.
+    Returns 1 for base ISO or unknown ISO, so the base-ISO path (a raw
+    passthrough, byte-identical to the original except FNumber) is untouched."""
     try:
         iso = float(iso)
     except (TypeError, ValueError):
