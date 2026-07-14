@@ -5,7 +5,7 @@
 Convert the Leica M8's uncompressed diagnostic-mode RAW into Adobe DNG.
 
 A clean-room, cross-platform (pure-Python) reimplementation of Arvid Kuehl's
-`m8raw2dng` v1.2beta - byte-faithful to its output, with optional refinements.
+`m8raw2dng` v1.20 - byte-faithful to its output, with optional refinements.
 
 See the [Wiki](https://github.com/botrx555/m8raw2dng2/wiki) for full documentation.
 
@@ -466,7 +466,7 @@ the original's; every refinement is opt-in.
 
 ## Version history
 
-`m8raw2dng2` reproduces the behaviour of Arvid Kuehl's `m8raw2dng` **v1.2beta** (its
+`m8raw2dng2` reproduces the behaviour of Arvid Kuehl's `m8raw2dng` **v1.20** (its
 last public release) and adds the refinements noted above. Versioned independently;
 see the Git tags / release notes for full per-version detail.
 
