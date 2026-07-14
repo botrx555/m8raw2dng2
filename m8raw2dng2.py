@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-m8raw2dng2 - a refined, clean-room reimplementation of Arvid's m8raw2dng v1.2beta,
+m8raw2dng2 - a refined, clean-room reimplementation of Arvid's m8raw2dng v1.20,
 the converter that turns the Leica M8's uncompressed "button-dance" .RAW files into
 Adobe DNG.
 
@@ -769,11 +769,14 @@ def _iso_gain(iso, base_iso: int = 160) -> int:
     stops.  The camera's real ISO steps (160/320/640/1250/2500) are successive
     doublings, so the gain is 2**round(log2(ISO/160)) = 1, 2, 4, 8, 16.
 
-    When a base-ISO sensor database is applied to a higher-ISO frame,
-    m8raw2dng2 scales BOTH the darkfield LevelCorrection (under -s) AND the
-    written BlackLevel (under -b) by this factor:
+    When a base-ISO sensor database is applied to a higher-ISO frame under -s,
+    m8raw2dng2 scales BOTH the darkfield LevelCorrection AND (when -b is also
+    given) the written BlackLevel by this factor:
     out == round(raw - gain*LevelCorrection) and BlackLevel == base_black*gain
-    (e.g. 90 -> 1440 at gain x16).  The original writes no BlackLevel tag.
+    (e.g. 92 -> 1472 at gain x16).  Under plain -b (no -s) m8raw2dng2 writes a
+    flat BlackLevel.  The original writes no BlackLevel on a bare conversion, but
+    under -b it writes base_black*gain (ISO-scaled, tag-only); so the two agree
+    under -s -b and diverge under plain -b at high ISO.
     Returns 1 for base ISO or unknown ISO, so the base-ISO path (a raw
     passthrough, byte-identical to the original except FNumber) is untouched."""
     try:
@@ -1831,7 +1834,7 @@ def discover_jobs(inputs, recursive):
 
 
 USAGE = f"""{PROG} {VERSION_DISPLAY} - refined Leica M8 RAW -> DNG converter
-(clean reimplementation of Arvid's m8raw2dng v1.2beta)
+(clean reimplementation of Arvid's m8raw2dng v1.20)
 
 Usage: {PROG} [options] [files-or-folders ...]
 
